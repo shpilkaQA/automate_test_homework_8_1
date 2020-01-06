@@ -85,7 +85,7 @@ public class TestLoginIn {
         open(WEBSITE);
         SelenideElement form = $(".form");
         form.$("[data-test-id=login] input").setValue("vasya");
-        form.$("[data-test-id=password] input").setValue("qwerty123");
+        form.$("[data-test-id=password] input").setValue("123");
         form.$(".button").click();
         $("[data-test-id=error-notification]").shouldHave(text("Неверно указан логин или пароль"));
     }

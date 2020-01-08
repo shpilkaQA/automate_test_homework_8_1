@@ -22,14 +22,20 @@ public class TestLoginIn {
     @AfterAll
     public static void dbClear() throws SQLException {
         val runner = new QueryRunner();
+        val deleteUsers = "DELETE FROM users;";
         val deleteAuth_codes = "DELETE FROM auth_codes;";
+        val deleteCards = "DELETE FROM cards;";
+        val deleteCard_transactions = "DELETE FROM card_transactions;";
         try (
                 val conn = DriverManager.getConnection(
                         URLDB, USER, PASSWORD
                 );
         ) {
             runner.update(conn, deleteAuth_codes);
-            System.out.println("Таблица auth_codes очищена");
+            runner.update(conn, deleteCards);
+            runner.update(conn, deleteCard_transactions);
+            runner.update(conn, deleteUsers);
+            System.out.println("Таблицы очищены");
         }
     }
     @Test
@@ -37,26 +43,15 @@ public class TestLoginIn {
     void validTestLoginIn() throws SQLException {
         val login = "vasya";
         val password = "qwerty123";
-        val userCode = "SELECT auth_codes.code FROM users JOIN auth_codes on users.id = auth_codes.user_id " +
-                "WHERE users.login = 'vasya';";
-        val runner = new QueryRunner();
-
-        try (
-                val conn = DriverManager.getConnection(
-                        URLDB, USER, PASSWORD
-                );
-        ) {
-            open(WEBSITE);
-            SelenideElement form = $(".form");
-            form.$("[data-test-id=login] input").setValue(login);
-            form.$("[data-test-id=password] input").setValue(password);
-            form.$(".button").click();
-            form.$("[data-test-id=code]").waitUntil(visible, 1000);
-            val code = runner.query(conn, userCode, new ScalarHandler<>());
-            form.$("[data-test-id=code] input").setValue(String.valueOf(code));
-            form.$(".button").click();
-            $("[data-test-id=dashboard]").waitUntil(visible, 1000);
-        }
+        open(WEBSITE);
+        SelenideElement form = $(".form");
+        form.$("[data-test-id=login] input").setValue(login);
+        form.$("[data-test-id=password] input").setValue(password);
+        form.$(".button").click();
+        form.$("[data-test-id=code]").waitUntil(visible, 1000);
+        form.$("[data-test-id=code] input").setValue(getAuthCode());
+        form.$(".button").click();
+        $("[data-test-id=dashboard]").waitUntil(visible, 1000);
     }
     @Test
     @DisplayName("Поля не заполнены")
@@ -100,5 +95,18 @@ public class TestLoginIn {
         form.$("[data-test-id=code] input").setValue("88888");
         form.$(".button").click();
         $("[data-test-id=error-notification]").shouldHave(text("Неверно указан код! Попробуйте ещё раз."));
+    }
+    public static String getAuthCode() throws SQLException {
+        val userCode = "SELECT auth_codes.code FROM users JOIN auth_codes on users.id = auth_codes.user_id " +
+                "WHERE users.login = 'vasya';";
+        val runner = new QueryRunner();
+        try (
+                val conn = DriverManager.getConnection(
+                        URLDB, USER, PASSWORD
+                );
+        ) {
+            val code = runner.query(conn, userCode, new ScalarHandler<>());
+            return String.valueOf(code);
+        }
     }
 }
